@@ -1,154 +1,101 @@
-from lift import Elevator
-import threading
-import time
-
 class Lexer:
-    def __init__(self, total_floors, e1 : Elevator, e2: Elevator, calls: list[list[int]], finishes: list[int]) -> None:
+    def __init__(self, total_floors, elevators, calls, finishes):
         self.total_floors = total_floors
         self.calls = calls
         self.finishes = finishes
         
-        self.getClosest = {
-            (True, True) : lambda *args: self.getClosestElevator(*args),
-            (True, False) : lambda *args: 0,
-            (False, True) : lambda *args: 1,
-            (False, False) : lambda *args: None
-        }
-        
-        self.actions = {
-            -1 : {
-                "OPEN" : "CLOSE",
-                "CLOSE" : "UP",
-                "UP" : "UP",
-                },
-            1 : {
-                "OPEN" : "CLOSE",
-                "CLOSE": "DOWN",
-                "DOWN" : "DOWN"
-            },
-            0 : {
-                "UP": "OPEN",
-                "DOWN": "OPEN",
-                "OPEN": "CLOSE",
-            }
-        }
-
+        self.elevator_by_number = {i: elevators[i] for i in range(len(elevators))}
         self.elevators = {
-            e1 : {
-                "move": None,
-                "start": None,
-                "finish": None,
-                "is_take": False,
-                "ready": True
-            },
-            e2 : {
-                "move": None,
-                "start": None,
-                "finish": None,
-                "is_take": False,
-                "ready": True
-            }
+            elevator: {"calls": [], "finishes": [], "target": None} for elevator in elevators
         }
         
-        self.lock = threading.Lock()
-        self.isWork = False
+        self.initStates()
+        self.initClosest()
         
-        self.shouldStopOrNot = {
-            True: "STOP",
-            False: None
-        }
+    def run(self):
+        while len(self.calls) != 0:
+            first_call = self.calls[0]
+            elevator_keys = list(self.elevators.keys())
+            elevator_number = self.chooseElevator(elevator_keys, first_call[0])
+            elevator = self.elevator_by_number[elevator_number]
+            print(f"call {first_call} задан лифту {elevator_number}")
+            self.setNextCallToElevator(elevator)
 
-    def handle_call(self, call, finish):
-        start, direction = call
-        elevators = list(self.elevators.keys())
-        elevator_number = self.chooseElevator(elevators, start)
-        elevator = elevators[elevator_number]
+    def setNextState(self, elevator, next_state):
+        elevator.makeAction(next_state)
 
-        with self.lock:
-            self.setCallToElevator(call, finish, elevator)
-
-
-    def do(self):
-        self.isWork = True
-        
-        threads = []
-        while self.isWork:
-            try:
-                next_call = self.getNextCall()
-                call, finish = next_call  # Попытка распаковки
-                print(f"New call: {call}")
-                thread = threading.Thread(target=self.handle_call, args=(call, finish))
-                threads.append(thread)
-                thread.start()
-            except TypeError:  # Если next_call - None, возникнет ошибка распаковки
-                break
-
-        for thread in threads:
-            thread.join()  # Ждем завершения всех потоков
-
-        return False
-
-    def setCallToElevator(self, call, finish, elevator: Elevator):
-        self.elevators[elevator]["start"] = call[0]
-        self.elevators[elevator]["finish"] = finish
-        self.elevators[elevator]["ready"] = False
-        self.elevators[elevator]["move"] = call[0]
-        self.elevators[elevator]["is_take"] = False
-        elevator.state = "CLOSE"
-        self.nextState(elevator)
-
-    def getNextCall(self):
+    def nextState(self, elevator):
+        target = self.elevators[elevator]["target"]
         try:
-            call = self.calls.pop(0)
-            finish = self.finishes.pop(0)
-            return call, finish
-        except IndexError:
-            self.isWork = False
-            return None
-
-    def chooseElevator(self, elevators: list[Elevator], start: int):
-        e1, e2 = elevators
-        e1_ready = self.elevators[e1]["ready"]
-        e2_ready = self.elevators[e2]["ready"]
-        key = e1_ready, e2_ready
-        
-        return self.getClosest[key](e1.current_floor, e2.current_floor, start)
-
-    def getClosestElevator(self, f1: int, f2: int, start: int):
-        return int(abs(f1 - start) > abs(f2 - start))
-    
-    def f(self, floor, move):
-        return (floor > move) - (floor < move)
-        # 1 if floor > move; 0 if floor == move; -1 if floor < move
-    
-    def chooseNextState(self, elevator, state, floor):
-        move = self.elevators[elevator]["move"]
-        
-        floor_move = self.f(floor, move)
-        print("state: ", state)
-        print("floor_move: ", floor_move)
-        action = self.actions[floor_move][state]
-        
-        return action
-
-    def nextState(self, elevator: Elevator):
-        state = elevator.state
-        floor = elevator.current_floor
-        time.sleep(0.3)
-        
-        print("floor: ", floor)
-        print(self.elevators[elevator])
-        
-        if state == "Exception":
-            self.elevators[elevator]["ready"] = True
+            self.states[elevator.floor, elevator.state][target](elevator)
+        except KeyError:
+            print("Некорректный вызов")
             return
 
-        next_state = self.chooseNextState(elevator, state, floor)
-        if state == "OPEN":
-            if self.elevators[elevator]["is_take"]:
-                self.elevators[elevator]["ready"] = True
-                return
-            self.elevators[elevator]["is_take"] = True
-            self.elevators[elevator]["move"] = self.elevators[elevator]["finish"]
+    def check(self, elevator, next_state):
+        try:
+            target = self.elevators[elevator]["finishes"].pop(0)
+            self.elevators[elevator]["target"] = target
+            self.setNextState(elevator, next_state)
+        except KeyError:
+            return
 
-        elevator.makeAction(next_state)
+    def setNextCallToElevator(self, elevator):
+        try:
+            call, direction = self.calls.pop(0)
+            finishes = self.finishes.pop(0)
+            self.elevators[elevator]["calls"].append([call, direction])
+            self.elevators[elevator]["target"] = call
+            self.elevators[elevator]["finishes"].append(finishes)
+            try:
+                key = (elevator.floor, elevator.state)
+            except IndexError:
+                print("Некорректный вызов")
+                return
+            self.states[key][call](elevator)
+        except IndexError:
+            return
+    
+    def initClosest(self):
+        self.closest = {}
+        for floor1 in range(1, self.total_floors + 1):
+            for floor2 in range(1, self.total_floors + 1):
+                self.closest[floor1, floor2] = {}
+        
+        for floor1 in range(1, self.total_floors + 1):
+            for floor2 in range(1, self.total_floors + 1):
+                for start_floor in range(1, self.total_floors + 1):
+                    self.closest[floor1, floor2].update({start_floor: self.getClosest(floor1, floor2, start_floor)})
+    
+    def chooseElevator(self, elevators, start_floor):
+        elevator_number = self.getClosest(elevators[0].floor, elevators[1].floor, start_floor)
+        return elevator_number
+    
+    def getClosest(self, floor1, floor2, start_floor):
+        return int(abs(floor1 - start_floor) > abs(floor2 - start_floor))
+    
+    def initStates(self):
+        self.states = {}
+        for floor in range(1, self.total_floors + 1):
+            self.states[floor, "CLOSE"] = {}
+            self.states[floor, "OPEN"] = {}
+            self.states[floor, "DOWN"] = {}
+            self.states[floor, "UP"] = {}
+        
+        for floor in range(1, self.total_floors + 1):
+            for target in range(1, self.total_floors + 1):
+                if floor > target:
+                    self.states[floor, "CLOSE"].update({target: lambda elevator: self.setNextState(elevator, "DOWN")})
+                    self.states[floor, "OPEN"].update({target: lambda elevator: self.setNextState(elevator, "CLOSE")})
+                    self.states[floor, "DOWN"].update({target: lambda elevator: self.setNextState(elevator, "DOWN")})
+                    self.states[floor, "UP"].update({target: lambda elevator: self.setNextState(elevator, "DOWN")})
+                elif floor < target:
+                    self.states[floor, "CLOSE"].update({target: lambda elevator: self.setNextState(elevator, "UP")})
+                    self.states[floor, "OPEN"].update({target: lambda elevator: self.setNextState(elevator, "CLOSE")})
+                    self.states[floor, "DOWN"].update({target: lambda elevator: self.setNextState(elevator, "UP")})
+                    self.states[floor, "UP"].update({target: lambda elevator: self.setNextState(elevator, "UP")})
+                else:
+                    self.states[floor, "CLOSE"].update({target: lambda elevator: self.setNextState(elevator, "OPEN")})
+                    self.states[floor, "OPEN"].update({target: lambda elevator: self.check(elevator, "CLOSE")})
+                    self.states[floor, "DOWN"].update({target: lambda elevator: self.setNextState(elevator, "OPEN")})
+                    self.states[floor, "UP"].update({target: lambda elevator: self.setNextState(elevator, "OPEN")})
