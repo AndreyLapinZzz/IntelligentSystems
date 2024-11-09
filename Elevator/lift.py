@@ -10,6 +10,12 @@ class Elevator:
             "OPEN": self.open,
         }
     
+    def initMoveCounter(self):
+        self.moveCounter = 0
+    
+    def getMoveCounter(self):
+        return self.moveCounter
+    
     def initLexer(self, lexer):
         self.lexer = lexer
 
@@ -18,7 +24,7 @@ class Elevator:
     
     def makeAction(self, action):
         self.state = action
-        print("action: ", action)
+        self.moveCounter += 1
         self.commands[action]()
         self.whatToDo()
     

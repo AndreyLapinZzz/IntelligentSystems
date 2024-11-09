@@ -19,8 +19,6 @@ def generate_calls(total_floors: int, n_calls: int):
             destination_floor = np.random.randint(0, call_floor)
         
         destination_floors.append(destination_floor)
-        
-    # destination_floors = np.array(destination_floors)
     
     calls = calls.astype(int)
 

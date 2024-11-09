@@ -4,7 +4,10 @@ class Lexer:
         self.calls = calls
         self.finishes = finishes
         
+        self.total_moves = 0
+        
         self.elevator_by_number = {i: elevators[i] for i in range(len(elevators))}
+        self.number_by_elevator = dict((v,k) for k, v in self.elevator_by_number.items())
         self.elevators = {
             elevator: {"calls": [], "finishes": [], "target": None} for elevator in elevators
         }
@@ -18,7 +21,6 @@ class Lexer:
             elevator_keys = list(self.elevators.keys())
             elevator_number = self.chooseElevator(elevator_keys, first_call[0])
             elevator = self.elevator_by_number[elevator_number]
-            print(f"call {first_call} задан лифту {elevator_number}")
             self.setNextCallToElevator(elevator)
 
     def setNextState(self, elevator, next_state):
@@ -29,7 +31,8 @@ class Lexer:
         try:
             self.states[elevator.floor, elevator.state][target](elevator)
         except KeyError:
-            print("Некорректный вызов")
+            print(f"Некорректный финальный этаж\nВызов не выполнен. Количество перемещений: {elevator.getMoveCounter()}\n")
+            self.total_moves += elevator.getMoveCounter()
             return
 
     def check(self, elevator, next_state):
@@ -37,7 +40,9 @@ class Lexer:
             target = self.elevators[elevator]["finishes"].pop(0)
             self.elevators[elevator]["target"] = target
             self.setNextState(elevator, next_state)
-        except KeyError:
+        except IndexError:
+            print(f"Вызов выполнен\nКоличество перемещений: {elevator.getMoveCounter()}\n")
+            self.total_moves += elevator.getMoveCounter()
             return
 
     def setNextCallToElevator(self, elevator):
@@ -47,13 +52,18 @@ class Lexer:
             self.elevators[elevator]["calls"].append([call, direction])
             self.elevators[elevator]["target"] = call
             self.elevators[elevator]["finishes"].append(finishes)
+            key = (elevator.floor, elevator.state)
+
             try:
-                key = (elevator.floor, elevator.state)
-            except IndexError:
-                print("Некорректный вызов")
+                print(f"call {[call, direction]} задан лифту {self.number_by_elevator[elevator]}")
+                elevator.initMoveCounter()
+                self.states[key][call](elevator)
+            except KeyError:
+                print("Не удалось задать вызов лифту\n")
                 return
-            self.states[key][call](elevator)
+
         except IndexError:
+            print("\n\nВызовов больше нет\n")
             return
     
     def initClosest(self):
