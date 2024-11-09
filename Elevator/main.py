@@ -1,15 +1,19 @@
 from lift import Elevator
 from lexer import Lexer
-from generate_calls import generate_calls
 
 total_floors = 4
-n_calls = 3
 
-calls, finishes = generate_calls(total_floors=total_floors, n_calls=n_calls)
 elevator1 = Elevator(1, total_floors)
 elevator2 = Elevator(1, total_floors)
 
-print(f"Вызовы: {calls}\n Финиши: {finishes}\n\n")
+calls = [
+    [-1, 1], [1, -1], [2, 1], [2, -1], [5, -1]
+]
+n_calls = len(calls)
+
+finishes = [
+    2, 0, 6, 1, 3
+]
 
 lexer = Lexer(total_floors, [elevator1, elevator2], calls, finishes)
 
