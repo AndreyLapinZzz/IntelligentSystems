@@ -7,7 +7,10 @@ class Stack:
         
     def pop(self):
         try:
-            return self.stack.pop()
+            return lambda: self.stack.pop()
         except IndexError:
-            print("Не LL(1) грамматика")
-            return False
+            print("Входная последовательность не удовлетворяет заданной LL(1) грамматике")
+            return lambda: IndexError
+
+    def getLength(self):
+        return len(self.stack)
