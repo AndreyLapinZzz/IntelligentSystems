@@ -1,16 +1,15 @@
 class Stack:
     def __init__(self):
-        self.stack = []
+        self.stack = ['empty']
 
     def push(self, value):
         self.stack.append(value)
         
     def pop(self):
         try:
-            return lambda: self.stack.pop()
+            return self.stack.pop()
         except IndexError:
-            print("Входная последовательность не удовлетворяет заданной LL(1) грамматике")
-            return lambda: IndexError
+            raise
 
     def getLength(self):
         return len(self.stack)

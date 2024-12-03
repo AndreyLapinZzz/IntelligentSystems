@@ -6,6 +6,8 @@ void f(a, b=7) {
     sum(a, b)
 }
 
+if ( true ) {}
+
 int sum(a, b) {
     int sumOfTwoNumbers = a + b
     return a + b
@@ -13,7 +15,16 @@ int sum(a, b) {
 
 f(x, y)
 
-((a) + (7 - b) * f(k, a) <= 3) || a > b
+f() {{}}
+f() {
+    if (condition) {
+        if (condition) {
+
+        }
+    }
+}
+
+((a) + (7 - b) * f(k, a) <= 3) || a && c > b
 y = x
 x = 3
 

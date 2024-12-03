@@ -1,81 +1,88 @@
 from abc import ABC, abstractmethod
 
-# state_transition_table[state][?]
-
-from main import lexer
-from main import stack
-
 class State(ABC):
     @abstractmethod
     def next(self):
         pass
 
 class StateN(State):
-    def next(self):
-        lexer.must_error_false()
-        lexer.nextState()
-        # return lexer.state_transition_table[lexer.state]['next_state']
-    
-class StateNR(State):
-    def next(self):
-        lexer.must_error_false()
-        lexer.return_()
-        # return lexer.state_transition_table[lexer.state]['next_state']
+    def __init__(self, lexer):
+        self.lexer = lexer
 
-class StateNER(State):
     def next(self):
-        lexer.must_error_true()
-        lexer.return_()
+        try:
+            self.lexer.must_error()
+        except ValueError:
+            self.lexer.incrementState()
+            return
 
-class StateNSR(State):
-    def next(self):
-        lexer.must_error_false()
-        stack.push(lexer.state + 1)
-        lexer.return_()
-
-class StateNA(State):
-    def next(self):
-        lexer.must_error_false()
-        lexer.accept()
-        return lexer.state_transition_table[lexer.state]['next_state']
-
-class StateNAR(State):
-    def next(self):
-        lexer.must_error_false()
-        lexer.accept()
-        lexer.return_()
-
-class StateNAER(State):
-    def next(self):
-        lexer.must_error_true()
-        lexer.accept()
-        lexer.return_()
-
-class StateNSE(State):
-    def next(self):
-        lexer.must_error_true()
-        stack.push(lexer.state + 1)
-        return lexer.state_transition_table[lexer.state]['next_state']
+        self.lexer.nextState()
 
 class StateNE(State):
-    def next(self):
-        lexer.must_error_true()
-        return lexer.state_transition_table[lexer.state]['next_state']
+    def __init__(self, lexer):
+        self.lexer = lexer
 
-class StateNS(State):
     def next(self):
-        lexer.must_error_false()
-        stack.push(lexer.state + 1)
-        return lexer.state_transition_table[lexer.state]['next_state']
+        try:
+            self.lexer.must_error()
+        except ValueError:
+            self.lexer.error = True
+            return
+
+        self.lexer.nextState()
+
+class StateER(State):
+    def __init__(self, lexer):
+        self.lexer = lexer
+
+    def next(self):
+        try:
+            self.lexer.must_error()
+        except ValueError:
+            self.lexer.error = True
+            return
+
+        self.lexer.return_()
+
+class StateAER(State):
+    def __init__(self, lexer):
+        self.lexer = lexer
+
+    def next(self):
+        try:
+            self.lexer.must_error()
+        except ValueError:
+            self.lexer.error = True
+            return
+
+        self.lexer.accept()
+        self.lexer.return_()
+
+class StateNSE(State):
+    def __init__(self, lexer, stack):
+        self.lexer = lexer
+        self.stack = stack
+
+    def next(self):
+        try:
+            self.lexer.must_error()
+        except ValueError:
+            self.lexer.error = True
+            return
+
+        self.stack.push(self.lexer.state + 1)
+        self.lexer.nextState()
 
 class StateNAE(State):
-    def next(self):
-        lexer.must_error_true()
-        lexer.accept()
-        return lexer.state_transition_table[lexer.state]['next_state']
+    def __init__(self, lexer):
+        self.lexer = lexer
 
-class StateNSER(State):
     def next(self):
-        lexer.must_error_true()
-        lexer.return_()
-        stack.push(lexer.state + 1)
+        try:
+            self.lexer.must_error()
+        except ValueError:
+            self.lexer.error = True
+            return
+
+        self.lexer.accept()
+        self.lexer.nextState()

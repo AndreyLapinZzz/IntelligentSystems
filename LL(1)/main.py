@@ -1,12 +1,43 @@
 from lexer import Lexer
 from stack import Stack
+from states import StateN, StateNE, StateER, StateNSE, StateNAE, StateAER
+import pickle
 
-lexer = Lexer()
 stack = Stack()
+lexer = Lexer()
 
-# закончим работу, если текущий символ - пусто и вытащили из стэка END
+stateN = StateN(lexer)
+stateNE = StateNE(lexer)
+stateER = StateER(lexer)
+stateNSE = StateNSE(lexer, stack)
+stateNAE = StateNAE(lexer)
+stateAER = StateAER(lexer)
 
-# если есть в направляющих - переходим в состояние. Если s == True, кладём в стэк state + 1
-# если accept есть, берём следующий символ
-# если return есть, берём из стэка state и тек.сост = state
+object_dict = {
+            (False, False, False, False) : stateN,
+            (False, False, True, False) : stateNE,
+            (False, False, True, True) : stateER,
+            (False, True, True, False) : stateNSE,
+            (True, False, True, False) : stateNAE,
+            (True, False, True, True) : stateAER,
+}
 
+file_path = input('Путь к файлу с таблицей DKA: ')
+with open(file_path, 'rb') as file:
+    transitions = pickle.load(file)
+    
+inputs = [
+    ['int', 'id', '(', 'int', 'id', ',', 'int', 'id', ')', '{', 'return', 'id', '+', 'id', '}', 'empty'],
+    ['id', '(', ')', 'empty'],
+    ['if', '(', 'true', ')', '{', '}', 'empty'],
+    ['int', 'id', '=', 'NUM', '*', 'empty'],
+    ['int', 'id', '(', 'int', 'id', ',', 'int', 'id', ')', '{', 'return', 'id', '+', 'id', 'int', 'id', '}', 'empty'],
+    ['число', '+', 'число', '+', '(', 'число', ')', 'empty'],
+    ['число', '+', 'число', 'empty']
+]
+
+lexer.initInput(inputs[0])
+lexer.initStack(stack)
+lexer.initDKA(transitions, object_dict)
+
+lexer.run()
