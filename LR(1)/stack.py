@@ -11,7 +11,7 @@ class Stack:
             return self.stack.pop()
         except IndexError:
             raise
-    
+
     def remove(self, n):
         try:
             self.stack = self.stack[:len(self.stack)-n+1]
